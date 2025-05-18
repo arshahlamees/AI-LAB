@@ -1,0 +1,6 @@
+flask
+torch
+torchvision
+Pillow==8.3.1
+werkzeug
+numpy==1.21.0
