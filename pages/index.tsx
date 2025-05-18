@@ -84,7 +84,7 @@ export default function Home() {
                     <p className="text-gray-600">Drag and drop an image here or click to select</p>
                 </div>
 
-                {preview && (
+                {selectedFile && (
                     <div className="mt-6">
                         <img src={preview} alt="Preview" className="max-w-full h-auto rounded-lg" />
                         <button
