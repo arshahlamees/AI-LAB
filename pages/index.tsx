@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import axios from 'axios';
 
 export default function Home() {
@@ -10,13 +10,22 @@ export default function Home() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
 
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
+    const handleFileSelect = useCallback((file: File) => {
         if (file) {
+            console.log('File selected:', file.name, file.type, file.size);
             setSelectedFile(file);
-            setPreview(URL.createObjectURL(file));
+            const previewUrl = URL.createObjectURL(file);
+            console.log('Preview URL created:', previewUrl);
+            setPreview(previewUrl);
             setPrediction('');
             setError('');
+        }
+    }, []);
+
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            handleFileSelect(file);
         }
     };
 
@@ -28,15 +37,15 @@ export default function Home() {
         event.preventDefault();
         const file = event.dataTransfer.files?.[0];
         if (file) {
-            setSelectedFile(file);
-            setPreview(URL.createObjectURL(file));
-            setPrediction('');
-            setError('');
+            handleFileSelect(file);
         }
     };
 
     const handleSubmit = async () => {
-        if (!selectedFile) return;
+        if (!selectedFile) {
+            console.error('No file selected');
+            return;
+        }
 
         setLoading(true);
         setError('');
@@ -46,15 +55,17 @@ export default function Home() {
         formData.append('file', selectedFile);
 
         try {
+            console.log('Sending request to /api/predict');
             const response = await axios.post('/api/predict', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
+            console.log('Response received:', response.data);
             setPrediction(response.data.prediction);
         } catch (err) {
-            setError('Error processing image. Please try again.');
-            console.error(err);
+            console.error('Error details:', err);
+            setError(err instanceof Error ? err.message : 'Error processing image. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -78,7 +89,7 @@ export default function Home() {
                         type="file"
                         id="fileInput"
                         accept="image/*"
-                        onChange={handleFileSelect}
+                        onChange={handleInputChange}
                         className="hidden"
                     />
                     <p className="text-gray-600">Drag and drop an image here or click to select</p>
@@ -86,7 +97,19 @@ export default function Home() {
 
                 {selectedFile && (
                     <div className="mt-6">
-                        <img src={preview} alt="Preview" className="max-w-full h-auto rounded-lg" />
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-600">Selected file: {selectedFile.name}</p>
+                            <p className="text-sm text-gray-600">Size: {(selectedFile.size / 1024).toFixed(2)} KB</p>
+                        </div>
+                        <img
+                            src={preview}
+                            alt="Preview"
+                            className="max-w-full h-auto rounded-lg"
+                            onError={(e) => {
+                                console.error('Error loading preview image');
+                                setError('Error loading preview image');
+                            }}
+                        />
                         <button
                             onClick={handleSubmit}
                             disabled={loading}
